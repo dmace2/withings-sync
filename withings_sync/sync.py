@@ -12,24 +12,11 @@ from withings2 import WithingsAccount
 from garmin import GarminConnect
 from fit import FitEncoder_Weight
 
+if "GU" in os.environ:
+    GARMIN_USERNAME = os.getenv("GU")
 
-try:
-    with open("/run/secrets/garmin_username", encoding="utf-8") as secret:
-        GARMIN_USERNAME = secret.read()
-except OSError:
-    GARMIN_USERNAME = ""
-
-try:
-    with open("/run/secrets/garmin_password", encoding="utf-8") as secret:
-        GARMIN_PASSWORD = secret.read()
-except OSError:
-    GARMIN_PASSWORD = ""
-
-if "GARMIN_USERNAME" in os.environ:
-    GARMIN_USERNAME = os.getenv("GARMIN_USERNAME")
-
-if "GARMIN_PASSWORD" in os.environ:
-    GARMIN_PASSWORD = os.getenv("GARMIN_PASSWORD")
+if "GU" in os.environ:
+    GARMIN_PASSWORD = os.getenv("GP")
 
 def get_args():
     """get command-line arguments"""
@@ -89,7 +76,7 @@ def get_args():
 def sync_garmin(fit_file):
     """Sync generated fit file to Garmin Connect"""
     garmin = GarminConnect()
-    session = garmin.login(ARGS.garmin_username, ARGS.garmin_password)
+    session = garmin.login(os.environ['GU'], os.environ['GP'])
     return garmin.upload_file(fit_file.getvalue(), session)
 
 

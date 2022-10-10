@@ -1,0 +1,27 @@
+name: Withings -> Garmin Connect Update
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 */12 * * *"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+  env:
+      GU: ${{ secrets.GARMIN_USERNAME }}
+      GP: ${{ secrets.GARMIN_PASSWORD }}
+      GR: ${{ secrets.REFRESH_TOKEN }}
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v3
+      - name: Install Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10' 
+      - name: Install Python Dependencies
+        run: |
+          pip install -r requirements.txt
+      - name: Check for Scale updates
+        run: python withings_sync/sync.py
