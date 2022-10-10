@@ -1,4 +1,4 @@
-name: Withings -> Garmin Connect Update
+name: Withings Garmin Connect Update
 
 on:
   workflow_dispatch:
