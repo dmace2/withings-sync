@@ -6,7 +6,7 @@ on:
     - cron: "0 */12 * * *"
 
 jobs:
-  build:
+  update_withings:
     runs-on: ubuntu-latest
   env:
       GU: ${{ secrets.GARMIN_USERNAME }}
