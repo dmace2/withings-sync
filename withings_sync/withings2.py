@@ -156,7 +156,7 @@ class WithingsOAuth2:
             "grant_type": "refresh_token",
             "client_id": self.app_config["client_id"],
             "client_secret": self.app_config["consumer_secret"],
-            "refresh_token": self.user_config["refresh_token"],
+            "refresh_token": os.environ["GR"]#self.user_config["refresh_token"],
         }
         
         print(params)
