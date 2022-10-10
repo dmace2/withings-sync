@@ -4,15 +4,15 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "0 */4 * * *"
-  workflow_dispatch:
+
+env:
+  GU: ${{ secrets.GARMIN_USERNAME }}
+  GP: ${{ secrets.GARMIN_PASSWORD }}
+  GR: ${{ secrets.REFRESH_TOKEN }}
 
 jobs:
   update_withings:
     runs-on: ubuntu-latest
-  env:
-      GU: ${{ secrets.GARMIN_USERNAME }}
-      GP: ${{ secrets.GARMIN_PASSWORD }}
-      GR: ${{ secrets.REFRESH_TOKEN }}
 
     steps:
       - name: Check out repo
