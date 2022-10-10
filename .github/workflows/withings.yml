@@ -3,7 +3,7 @@ name: Withings Garmin Connect Update
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 */4 * * *"
+    - cron: "59 11 * * *"
 
 env:
   GU: ${{ secrets.GARMIN_USERNAME }}
