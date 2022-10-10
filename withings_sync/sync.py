@@ -8,10 +8,9 @@ import json
 
 from datetime import date, datetime
 
-from withings_sync.withings2 import WithingsAccount
-from withings_sync.garmin import GarminConnect
-from withings_sync.trainerroad import TrainerRoad
-from withings_sync.fit import FitEncoder_Weight
+from withings2 import WithingsAccount
+from garmin import GarminConnect
+from fit import FitEncoder_Weight
 
 
 try:
@@ -32,33 +31,12 @@ if "GARMIN_USERNAME" in os.environ:
 if "GARMIN_PASSWORD" in os.environ:
     GARMIN_PASSWORD = os.getenv("GARMIN_PASSWORD")
 
-
-try:
-    with open("/run/secrets/trainerroad_username", encoding="utf-8") as secret:
-        TRAINERROAD_USERNAME = secret.read()
-except OSError:
-    TRAINERROAD_USERNAME = ""
-
-try:
-    with open("/run/secrets/trainerroad_password", encoding="utf-8") as secret:
-        TRAINERROAD_PASSWORD = secret.read()
-except OSError:
-    TRAINERROAD_PASSWORD = ""
-
-if "TRAINERROAD_USERNAME" in os.environ:
-    TRAINERROAD_USERNAME = os.getenv("TRAINERROAD_USERNAME")
-
-if "TRAINERROAD_PASSWORD" in os.environ:
-    TRAINERROAD_PASSWORD = os.getenv("TRAINERROAD_PASSWORD")
-
-
 def get_args():
     """get command-line arguments"""
     parser = argparse.ArgumentParser(
         description=(
             "A tool for synchronisation of Withings "
             "(ex. Nokia Health Body) to Garmin Connect"
-            " and Trainer Road or to provide a json string."
         )
     )
 
@@ -82,23 +60,6 @@ def get_args():
         help="password to log in to Garmin Connect.",
     )
 
-    parser.add_argument(
-        "--trainerroad-username",
-        "--tu",
-        default=TRAINERROAD_USERNAME,
-        type=str,
-        metavar="TRAINERROAD_USERNAME",
-        help="username to log in to TrainerRoad.",
-    )
-    parser.add_argument(
-        "--trainerroad-password",
-        "--tp",
-        default=TRAINERROAD_PASSWORD,
-        type=str,
-        metavar="TRAINERROAD_PASSWORD",
-        help="password to log in to TrainerRoad.",
-    )
-
     parser.add_argument("--fromdate", "-f", type=date_parser, metavar="DATE")
     parser.add_argument(
         "--todate", "-t", type=date_parser, default=date.today(), metavar="DATE"
@@ -106,12 +67,6 @@ def get_args():
 
     parser.add_argument(
         "--to-fit", "-F", action="store_true", help=("Write output file in FIT format.")
-    )
-    parser.add_argument(
-        "--to-json",
-        "-J",
-        action="store_true",
-        help=("Write output file in JSON format."),
     )
     parser.add_argument(
         "--output",
@@ -136,17 +91,6 @@ def sync_garmin(fit_file):
     garmin = GarminConnect()
     session = garmin.login(ARGS.garmin_username, ARGS.garmin_password)
     return garmin.upload_file(fit_file.getvalue(), session)
-
-
-def sync_trainerroad(last_weight):
-    """Sync measured weight to TrainerRoad"""
-    t_road = TrainerRoad(ARGS.trainerroad_username, ARGS.trainerroad_password)
-    t_road.connect()
-    logging.info("Current TrainerRoad weight: %s kg ", t_road.weight)
-    logging.info("Updating TrainerRoad weight to %s kg", last_weight)
-    t_road.weight = round(last_weight, 1)
-    t_road.disconnect()
-    return t_road.weight
 
 
 def generate_fitdata(syncdata):
@@ -186,25 +130,6 @@ def generate_fitdata(syncdata):
 
     logging.debug("Fit data generated...")
     return fit
-
-
-def generate_jsondata(syncdata):
-    """Generate fit data from measured data"""
-    logging.debug("Generating json data...")
-
-    json_data = {}
-    for record in syncdata:
-        sdt = str(record["date_time"])
-        json_data[sdt] = {}
-        for dataentry in record["raw_data"]:
-            for k,jd in dataentry.json_dict().items():
-                json_data[sdt][k] = jd
-        if "bmi" in record:
-            json_data[sdt]["BMI"] = { "Value": record["bmi"], "Unit": "kg/m^2"}
-        if "percent_hydration" in record:
-             json_data[sdt]["Percent_Hydration"] = { "Value": record["percent_hydration"], "Unit": "%"}
-    logging.debug("Json data generated...")
-    return json_data
 
 
 def prepare_syncdata(height, groups):
@@ -295,7 +220,7 @@ def prepare_syncdata(height, groups):
     return last_weight, last_date_time, syncdata
 
 
-def write_to_file_when_needed(fit_data, json_data):
+def write_to_file_when_needed(fit_data):
     """Write measurements to file when requested"""
     if ARGS.output is not None:
         if ARGS.to_fit and fit_data is not None:
@@ -306,18 +231,11 @@ def write_to_file_when_needed(fit_data, json_data):
                     fitfile.write(fit_data.getvalue())
             except OSError:
                 logging.error("Unable to open output fitfile!")
-        if ARGS.to_json:
-            filename = ARGS.output + ".json"
-            logging.info("Writing jsonfile to %s.", filename)
-            try:
-                with open(filename, "w", encoding="utf-8") as jsonfile:
-                    json.dump(json_data, jsonfile, indent=4)
-            except OSError:
-                logging.error("Unable to open output jsonfile!")
 
 
 def sync():
     """Sync measurements from Withings to Garmin a/o TrainerRoad"""
+    print("BEGIN SYNC")
 
     # Withings API
     withings = WithingsAccount()
@@ -349,23 +267,12 @@ def sync():
     last_weight, last_date_time, syncdata = prepare_syncdata(height, groups)
 
     fit_data = generate_fitdata(syncdata)
-    json_data = generate_jsondata(syncdata)
 
-    write_to_file_when_needed(fit_data, json_data)
+    write_to_file_when_needed(fit_data)
 
     if ARGS.no_upload:
         logging.info("Skipping upload")
         return 0
-
-    # Upload to Trainer Road
-    if ARGS.trainerroad_username and last_weight is not None:
-        logging.info("Trainerroad username set -- attempting to sync")
-        logging.info(" Last weight %s", last_weight)
-        logging.info(" Measured %s", last_date_time)
-        if sync_trainerroad(last_weight):
-            logging.info("TrainerRoad update done!")
-    else:
-        logging.info("No Trainerroad username or a new measurement " "- skipping sync")
 
     # Upload to Garmin Connect
     if ARGS.garmin_username and fit_data is not None:
@@ -394,3 +301,6 @@ def main():
         sys.exit(1)
 
     sync()
+
+if __name__ == "__main__":
+    main()
