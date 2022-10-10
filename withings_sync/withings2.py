@@ -158,6 +158,8 @@ class WithingsOAuth2:
             "client_secret": self.app_config["consumer_secret"],
             "refresh_token": self.user_config["refresh_token"],
         }
+        
+        print(params)
 
         req = requests.post(TOKEN_URL, params)
         resp = req.json()
