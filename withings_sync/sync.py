@@ -6,7 +6,7 @@ import os
 import logging
 import json
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from withings2 import WithingsAccount
 from garmin import GarminConnect
@@ -33,7 +33,7 @@ def get_args():
     parser.add_argument(
         "--garmin-username",
         "--gu",
-        default=GARMIN_USERNAME,
+        default="",
         type=str,
         metavar="GARMIN_USERNAME",
         help="username to log in to Garmin Connect.",
@@ -41,7 +41,7 @@ def get_args():
     parser.add_argument(
         "--garmin-password",
         "--gp",
-        default=GARMIN_PASSWORD,
+        default="",
         type=str,
         metavar="GARMIN_PASSWORD",
         help="password to log in to Garmin Connect.",
@@ -49,7 +49,7 @@ def get_args():
 
     parser.add_argument("--fromdate", "-f", type=date_parser, metavar="DATE")
     parser.add_argument(
-        "--todate", "-t", type=date_parser, default=date.today(), metavar="DATE"
+        "--todate", "-t", type=date_parser, default=date.today() - timedelta(days=1), metavar="DATE"
     )
 
     parser.add_argument(
